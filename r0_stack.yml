@@ -1,0 +1,73 @@
+# r0_stack.yml — tmuxinator project for the full r0 simulation + Nav2 stack
+#
+# Install tmuxinator (one-time):
+#   sudo apt install tmux ruby ruby-dev
+#   sudo gem install tmuxinator
+#
+# Usage:
+#   tmuxinator start -p r0_stack.yml
+#   (or copy this file to ~/.tmuxinator/r0_stack.yml and just run:
+#    tmuxinator start r0_stack)
+#
+# To stop everything: Ctrl+B then :kill-session, or `tmux kill-session -t r0_stack`
+#
+# NOTE ON TIMING: the `sleep N` values below are staggered based on this
+# VM's observed real startup latency (Gazebo GUI load, robot spawn +
+# controller activation lag documented in WORK_LOG.md Sessions 5-8). If a
+# pane fires its command too early on your machine (e.g. Nav2 complains
+# services aren't up yet), just Ctrl+C that pane and re-run its command
+# manually once the previous stage is confirmed ready -- these are
+# convenience defaults, not a guaranteed handshake.
+
+name: r0_stack
+root: ~/phd_assignment_ws
+
+# Every pane gets this before its own command.
+pre_window: export LIBGL_ALWAYS_SOFTWARE=1
+
+windows:
+  - gazebo:
+      layout: main-horizontal
+      panes:
+        - ros2 launch clearpath_gz gz_sim.launch.py world:=warehouse setup_path:=$HOME/phd_assignment_ws/clearpath/r0/
+
+  - spawn_r0:
+      panes:
+        - >
+          sleep 15 &&
+          ros2 launch clearpath_gz robot_spawn.launch.py
+          setup_path:=$HOME/phd_assignment_ws/clearpath/r0/
+          world:=warehouse x:=0.0 y:=0.0 z:=0.3 yaw:=0.0
+
+  - nav2:
+      panes:
+        - >
+          sleep 45 &&
+          ros2 launch nav2_bringup bringup_launch.py
+          namespace:=r0 use_namespace:=true
+          map:=$HOME/phd_assignment_ws/r0_warehouse_map.yaml
+          use_sim_time:=true
+          params_file:=$HOME/phd_assignment_ws/nav2_config/nav2_params_r0.yaml
+
+  - initial_pose:
+      panes:
+        - >
+          sleep 75 &&
+          ros2 topic pub -1 /r0/initialpose geometry_msgs/msg/PoseWithCovarianceStamped
+          "{header: {frame_id: 'map'}, pose: {pose: {position: {x: 0.0, y: 0.0, z: 0.0}, orientation: {w: 1.0}}}}"
+          && echo "Initial pose sent. Check RViz/tf2_echo to confirm AMCL is localizing."
+
+  - rviz:
+      panes:
+        - >
+          sleep 55 &&
+          ros2 run rviz2 rviz2 -d $HOME/phd_assignment_ws/nav2_r0.rviz --ros-args
+          -r /tf:=/r0/tf -r /tf_static:=/r0/tf_static
+
+  - control:
+      layout: even-vertical
+      panes:
+        - echo "Free pane -- e.g.: ros2 control list_controllers -c /r0/controller_manager"
+        - >
+          echo 'Free pane -- example nav goal command:' &&
+          echo 'ros2 action send_goal /r0/navigate_to_pose nav2_msgs/action/NavigateToPose "{pose: {header: {frame_id: map}, pose: {position: {x: 3.0, y: 0.0, z: 0.0}, orientation: {w: 1.0}}}}" --feedback'

@@ -1,0 +1,84 @@
+serial_number: a200-0000
+version: 0
+
+system:
+  hosts:
+    - hostname: r0
+      ip: 127.0.0.1
+  ros2:
+    namespace: r0
+    domain_id: 0
+    middleware:
+      implementation: rmw_fastrtps_cpp
+    workspaces: []
+
+platform:
+  model: a200
+  attachments:
+    - name: top0
+      type: top_plate
+      model: default
+      parent_link: default_mount
+
+    - name: arch0
+      type: sensor_arch
+      model: sensor_arch_510
+      parent_link: top0_default_mount
+
+sensors:
+  imu:
+    - model: microstrain_imu
+      urdf_enabled: true
+      launch_enabled: true
+      parent: base_link
+      xyz: [0.0, 0.0, 0.0]
+      rpy: [0.0, 0.0, 0.0]
+
+  lidar2d:
+    - model: hokuyo_ust
+      urdf_enabled: true
+      launch_enabled: true
+      parent: top0_front_mount
+      xyz: [0.0, 0.0, 0.0]
+      rpy: [0.0, 0.0, 0.0]
+      ros_parameters:
+        urg_node:
+          laser_frame_id: r0/lidar2d_0_laser
+
+  lidar3d:
+    # Disabled for performance: not used by RTAB-Map (uses RGB-D + lidar2d)
+    # or Nav2 (costmaps use lidar2d only). GPU lidar simulation is one of
+    # the most expensive sensor types to simulate; removing it frees real
+    # compute for the sensors we actually consume.
+    - model: velodyne_lidar
+      urdf_enabled: false
+      launch_enabled: false
+      parent: arch0_mount
+      xyz: [0.0, 0.0, 0.05]
+      rpy: [0.0, 0.0, 0.0]
+      ros_parameters:
+        velodyne_driver_node:
+          frame_id: r0/lidar3d_0_laser
+          model: VLP16
+        velodyne_transform_node:
+          model: VLP16
+          fixed_frame: r0/lidar3d_0_laser
+          target_frame: r0/lidar3d_0_laser
+
+  camera:
+    - model: intel_realsense
+      urdf_enabled: true
+      launch_enabled: true
+      parent: top0_rear_mount
+      xyz: [0.0, 0.0, 0.05]
+      rpy: [0.0, 0.0, 0.0]
+      ros_parameters:
+        intel_realsense:
+          camera_name: camera_0
+          device_type: d435
+          enable_color: true
+          enable_depth: true
+          # Disabled for performance: point cloud generation from depth is
+          # expensive and RTAB-Map's rgbd_sync already works from the raw
+          # color+depth images directly, not this pre-generated cloud.
+          pointcloud.enable: false

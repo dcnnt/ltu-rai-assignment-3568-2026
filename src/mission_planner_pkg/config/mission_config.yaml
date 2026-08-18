@@ -1,0 +1,8 @@
+mission_planner_node:
+  ros__parameters:
+    robot_namespaces: ["r0", "r1"]   
+    waypoints_x: [-0.234189, -3.6592, -2.13388, 2.52655, 6.11081, 8.91584, 11.9494, 17.9382, 22.5195, 8.05336]
+    waypoints_y: [-3.07228, -1.65732, 4.01607, 6.07927, 7.16757, 10.5112, 7.33454, 8.12096, 7.70941, 0.273929]
+    action_server_wait_timeout_sec: 5.0
+    planning_tick_period_sec: 1.0
+

@@ -78,8 +78,6 @@ ros2 topic pub -1 /r0/initialpose geometry_msgs/msg/PoseWithCovarianceStamped '{
 ros2 topic pub -1 /r1/initialpose geometry_msgs/msg/PoseWithCovarianceStamped '{header: {frame_id: "map"}, pose: {pose: {position: {x: 2.0, y: 0.0, z: 0.0}, orientation: {w: 1.0}}}}'
 
 ros2 topic pub -1 /r2/initialpose geometry_msgs/msg/PoseWithCovarianceStamped '{header: {frame_id: "map"}, pose: {pose: {position: {x: 4.0, y: 0.0, z: 0.0}, orientation: {w: 1.0}}}}'
-
-
 ```
 
 **4. RViz2** (optional, for visualization)
@@ -92,24 +90,148 @@ rviz2 -d rviz2/nav2_r0.rviz
 ros2 run mission_planner_pkg mission_planner_node
 ```
 
-**6. Mission bridge node** (integration point with Task 2.2)
-```bash
-ros2 run mission_bridge_pkg mission_bridge_node --ros-args -p robot_namespace:=r0
-```
-This subscribes to `/semantic_task_plan` and forwards executable plans
-to Nav2 as navigation goals. See `src/sm_mission_planner/README.md` for
-how to generate and publish a plan.
-
 ## Known limitations
 
 - No watchdog timeout for stalled goals: if a robot never
   reaches a goal or reports failure, the mission planner does not
   currently detect this.
+
 - Waypoint assignment uses Euclidean distance, which is blind to
   obstacles; `ComputePathToPose` would give a more accurate cost.
+
 - `r0` and `r1` were configured with a reduced sensor set relative to
 their default Clearpath `a200` loadout, to improve simulation
 performance, `r2` retains the full default sensor loadout .
+
+
+
+# Task 2.2 — Semantic Mission Planning and Grounding
+
+## Overview
+
+This directory implements a  pipeline
+that grounds a natural-language instruction against a scene graph of
+the Task 2.1 warehouse environment, verifies the result
+ and produces a task plan. That plan can then be consumed by
+`mission_bridge_pkg` (Task 2.1 side) to drive robot navigation 
+
+## Directory structure
+sm_mission_planner/
+├── JSON/
+│ └── scene_graph.json # regions + objects extracted from warehouse.sdf
+├── maps/
+│ └── overlay.png # scene_graph regions/objects drawn over the .pgm map,
+│ # used to visually verify region boundaries
+├── ground_stage_region.py # Stage 1: instruction -> region_id
+├── ground_stage_object.py # Stage 2: instruction + region_id -> object_id
+├── validation.py # safety/consistency checks on the grounded result
+└── pipeline.py # orchestrates the full flow end to end
+
+### `JSON/scene_graph.json`
+Two dictionaries: `regions` (each with a `bbox` and a `label`) and
+`objects` (each with `type`, `position`, and `parent_region`). Derived
+from `warehouse.sdf` and verified against the `.pgm` map file (see
+`maps/overlay.png`).
+
+### `ground_stage_region.py`
+Resolves which region of the warehouse an instruction refers to.
+Uses Qwen3:8B via Ollama with the `format` parameter (JSON Schema,
+`enum = region_ids`) to constrain the output.
+The model cannot return a region id that doesn't exist in the scene graph.
+
+### `ground_stage_object.py`
+Given the region resolved in Stage 1, resolves which specific object
+within it the instruction refers to. Candidates are scoped to objects
+whose `parent_region` matches the resolved region. Returns
+`NO_OBJECT` when the instruction refers only to the area, with no
+specific object mentioned (e.g. "go to the break area")
+
+### `validation.py`
+Checks whether the grounded result can be safely executed. When a
+specific object is targeted: existence, region/object hierarchy
+consistency, confidence gate, and proximity-based safety against any
+`human` in the scene graph. 
+
+### `pipeline.py`
+Runs Stage 1 → Stage 2 → validation and prints the resulting task
+plan as JSON, along with a formatted robot instruction string.
+
+## Prerequisites
+
+Ollama running with `qwen3:8b` pulled — on the host machine (tested on
+macOS, Apple Silicon), since the VM does not have the compute for local
+LLM inference:
+```bash
+ollama pull qwen3:8b
+```
+
+Python dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+## Running
+
+**Full pipeline** (Runs Stage 1 (regions), Stage 2(Objects), and validation
+in sequence):
+```bash
+python3 pipeline.py
+```
+Prompts for an instruction on terminal and prints the resulting task plan.
+
+**Individual stages** (for isolated testing):
+```bash
+python3 ground_stage_region.py    # prompts for an instruction, prints the obtained region
+python3 ground_stage_object.py    # requires importing resolve_region first, see __main__
+python3 validation.py             # runs three built-in demo cases against the scene graph
+```
+
+## Testing end-to-end with Task 2.1
+
+`pipeline.py`  prints the resulted plan to the terminal; it
+does not yet publish directly to a ROS 2 topic (see Known Limitations).
+
+**1.** Run `pipeline.py` on the host machine and copy the printed JSON plan.
+
+**2.** With the Task 2.1 running 
+
+`mission_bridge_node` running inside the VM:
+
+```bash
+ros2 run mission_bridge_pkg mission_bridge_node --ros-args -p robot_namespace:=r0
+```
+
+**3.** Publish the plan to the topic it listens on:
+```bash
+ros2 run mission_bridge_pkg mission_bridge_node --ros-args -p robot_namespace:=r0
+```
+
+```bash
+ros2 topic pub /semantic_task_plan std_msgs/String   '{data: "{\"executable\": true, \"action\": \"navigate_to\", \"object_id\": \"chair_0\", \"region_id\": \"south_corridor\", \"target_position\": {\"x\": 14.3, \"y\": -5.5}}"}' --once
+```
+
+If the plan is executable, `mission_bridge_node` sends the resulting
+goal to Nav2.
+(navigation goals sent to an object exact center may fail to plan if that point
+falls on the object's footprint in the occupancy grid) Adjustments to get the closest
+point need to be used.
+
+## Known limitations
+
+- The pipeline runs standalone and does not publish directly
+  to `/semantic_task_plan`; connecting the two is a manual copy/paste
+  step for now.
+- Event re-planning (target occluded, anomaly detected, safety
+  violation) was observed during design but not implemented.
+  
+- Two directions of confidence miscalibration: overconfidence when
+ a region is  ambiguous (e.g.
+  "go to the area and find shelf", where shelves exist in 4 of 5
+  regions), and  low confidence on `NO_OBJECT` responses
+  even when correct.
+- `closest_point_in_bbox` (used by `mission_bridge_node` for area-only
+  plans) clamps to the region's bounding box without checking
+  occupancy; 
 
 - `mission_bridge_node` sends the target object's exact center position
   as the navigation goal. Since this point can coincide with the
@@ -117,4 +239,6 @@ performance, `r2` retains the full default sensor loadout .
   may fail to find a valid path within the default tolerance. An
   approach-offset point near the object, rather than its exact center,
   would resolve this not implemented in this deliverable.
+
+
 

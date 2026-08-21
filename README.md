@@ -142,17 +142,6 @@ the Task 2.1 warehouse environment, verifies the result
  and produces a task plan. That plan can then be consumed by
 `mission_bridge_pkg` (Task 2.1 side) to drive robot navigation 
 
-## Directory structure
-sm_mission_planner/
-├── JSON/
-│ └── scene_graph.json # regions + objects extracted from warehouse.sdf
-├── maps/
-│ └── overlay.png # scene_graph regions/objects drawn over the .pgm map,
-│ # used to visually verify region boundaries
-├── ground_stage_region.py # Stage 1: instruction -> region_id
-├── ground_stage_object.py # Stage 2: instruction + region_id -> object_id
-├── validation.py # safety/consistency checks on the grounded result
-└── pipeline.py # orchestrates the full flow end to end
 
 ### `JSON/scene_graph.json`
 Two dictionaries: `regions` (each with a `bbox` and a `label`) and

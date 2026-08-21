@@ -55,7 +55,7 @@ ros2 launch clearpath_gz robot_spawn.launch.py \
 
 ```bash
 ros2 launch clearpath_gz robot_spawn.launch.py \
-  setup_path:=/home/user/dev/phd_assignment_ws/clearpath/r1 \
+  setup_path:=/home/user/dev/phd_assignment_ws/clearpath/r2 \
   world:=warehouse x:=4.0 y:=0.0 z:=0.1 yaw:=0.0
 ```
 
@@ -202,9 +202,6 @@ ros2 run mission_bridge_pkg mission_bridge_node --ros-args -p robot_namespace:=r
 ```
 
 **3.** Publish the plan to the topic it listens on:
-```bash
-ros2 run mission_bridge_pkg mission_bridge_node --ros-args -p robot_namespace:=r0
-```
 
 ```bash
 ros2 topic pub /semantic_task_plan std_msgs/String   '{data: "{\"executable\": true, \"action\": \"navigate_to\", \"object_id\": \"chair_0\", \"region_id\": \"south_corridor\", \"target_position\": {\"x\": 14.3, \"y\": -5.5}}"}' --once

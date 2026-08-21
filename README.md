@@ -11,7 +11,7 @@ The second package, `mission_bridge_pkg`, connects this stack to the
 semantic mission planning pipeline built in Task 2.2: it subscribes to
 a topic carrying a grounded task plan and forwards it to Nav2 as a
 `NavigateToPose` goal. 
-See `src/sm_mission_planner/README.md` for how
+See the "Task 2.2" section below for how
 that plan is produced.
 
 ## Prerequisites
@@ -19,6 +19,33 @@ that plan is produced.
 - ROS 2 Humble
 - Gazebo Ignition Fortress
 - Clearpath ROS 2 packages (`clearpath_gz`, `nav2_bringup`)
+
+**Note (ARM64 / Apple Silicon):** `ros_gz`, `gz_ros2_control`, and the Clearpath
+stack are not published as ARM64 binaries for Humble and were built from
+source into a separate `deps_ws`, sourced ahead of this workspace:
+
+```bash
+mkdir -p ~/dev/deps_ws/src && cd ~/dev/deps_ws/src
+
+git clone -b humble https://github.com/clearpathrobotics/clearpath_common.git
+git clone -b humble https://github.com/clearpathrobotics/clearpath_config.git
+git clone -b humble https://github.com/clearpathrobotics/clearpath_msgs.git
+git clone -b humble https://github.com/clearpathrobotics/clearpath_simulator.git
+git clone -b humble https://github.com/ros-controls/gz_ros2_control.git
+git clone -b humble https://github.com/gazebosim/ros_gz.git
+
+cd ~/dev/deps_ws
+rosdep install --from-paths src --ignore-src -r -y
+colcon build --symlink-install
+```
+
+Source both workspaces in this order before running anything else in this repo:
+```bash
+source /opt/ros/humble/setup.bash
+source ~/dev/deps_ws/install/setup.bash
+source ~/dev/phd_assignment_ws/install/setup.bash
+export ROS_DOMAIN_ID=0
+```
 
 ## Build
 

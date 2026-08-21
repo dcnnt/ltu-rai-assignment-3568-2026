@@ -77,7 +77,7 @@ def resolve_region(instruction: str, regions: dict) -> dict:
 
 
 if __name__ == "__main__":
-    with open("src/sm_mission_planner/JSON/scene_graph.json") as f:
+    with open("JSON/scene_graph.json") as f:
         scene = json.load(f)
 
     instruction = input("Instruction: ")

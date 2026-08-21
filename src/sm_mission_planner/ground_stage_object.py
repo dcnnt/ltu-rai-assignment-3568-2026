@@ -69,3 +69,17 @@ def resolve_object(instruction: str, region_id: str, objects: dict) -> dict:
     assert result["object_id"] in candidates or result["object_id"] == NO_OBJECT, \
         "Error model results"
     return result
+
+if __name__ == "__main__":
+    from ground_stage_region import resolve_region
+
+    with open("JSON/scene_graph.json") as f:
+        scene = json.load(f)
+
+    instruction = input("Instruction: ")
+
+    region_result = resolve_region(instruction, scene["regions"])
+    print("Region result:", region_result)
+
+    object_result = resolve_object(instruction, region_result["region_id"], scene["objects"])
+    print("Object result:", object_result)

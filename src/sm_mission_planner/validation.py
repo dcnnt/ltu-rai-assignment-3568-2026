@@ -77,3 +77,32 @@ def verify_plan(region_result, object_result, scene):
             return {"executable": False, "failed_check": name, "reason": reason}
 
     return {"executable": True, "failed_check": None, "reason": "todos los chequeos pasados"}
+
+if __name__ == "__main__":
+    import json
+
+    with open("JSON/scene_graph.json") as f:
+        scene = json.load(f)
+
+    demo_cases = [
+        {
+            "name": "1. Caso valido (pasa todos los checks)",
+            "region_result": {"region_id": "south_corridor", "confidence": "high"},
+            "object_result": {"object_id": "chair_0", "confidence": "high"},
+        },
+        {
+            "name": "2. Objeto inexistente en el scene graph (check_existence)",
+            "region_result": {"region_id": "south_corridor", "confidence": "high"},
+            "object_result": {"object_id": "pallet_box_0", "confidence": "high"},
+        },
+        {
+            "name": "3. Bloqueado por proximidad a una persona (check_human_safety)",
+            "region_result": {"region_id": "central_area", "confidence": "high"},
+            "object_result": {"object_id": "shelf_7", "confidence": "high"},
+        },
+    ]
+
+    for case in demo_cases:
+        print(f"\n{case['name']}")
+        result = verify_plan(case["region_result"], case["object_result"], scene)
+        print(json.dumps(result, indent=2, ensure_ascii=False))

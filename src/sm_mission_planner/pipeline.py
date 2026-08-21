@@ -1,3 +1,4 @@
+import json
 from ground_stage_region import resolve_region
 from ground_stage_object import resolve_object, NO_OBJECT
 from validation import verify_plan
@@ -80,3 +81,14 @@ def format_robot_instruction(plan: dict) -> str:
         f"object={plan['object_id']}, region={plan['region_id']}, "
         f"target=({t['x']}, {t['y']}))"
     )
+
+if __name__ == "__main__":
+    with open("JSON/scene_graph.json") as f:
+        scene = json.load(f)
+
+    instruction = input("Instruction: ")
+    plan = run_mission(instruction, scene)
+
+    print(json.dumps(plan, indent=2, ensure_ascii=False))
+    print()
+    print(format_robot_instruction(plan))

@@ -43,7 +43,7 @@ Source both workspaces in this order before running anything else in this repo:
 ```bash
 source /opt/ros/humble/setup.bash
 source ~/dev/deps_ws/install/setup.bash
-source ~/dev/phd_assignment_ws/install/setup.bash
+source ~/dev/ltu-rai-assignment-3568-2026/install/setup.bash
 export ROS_DOMAIN_ID=0
 ```
 
@@ -51,7 +51,7 @@ export ROS_DOMAIN_ID=0
 
 From the workspace root:
 ```bash
-cd ~/dev/phd_assignment_ws
+cd ~/dev/ltu-rai-assignment-3568-2026
 colcon build --symlink-install
 source install/setup.bash
 ```
@@ -70,19 +70,19 @@ ros2 launch clearpath_gz gz_sim.launch.py world:=warehouse
 **2. Spawn the robot**
 ```bash
 ros2 launch clearpath_gz robot_spawn.launch.py \
-  setup_path:=/home/user/dev/phd_assignment_ws/clearpath/r0 \
+  setup_path:=/home/user/dev/ltu-rai-assignment-3568-2026/clearpath/r0 \
   world:=warehouse x:=0.0 y:=0.0 z:=0.1 yaw:=0.0
 ```
 
 ```bash
 ros2 launch clearpath_gz robot_spawn.launch.py \
-  setup_path:=/home/user/dev/phd_assignment_ws/clearpath/r1 \
+  setup_path:=/home/user/dev/ltu-rai-assignment-3568-2026/clearpath/r1 \
   world:=warehouse x:=2.0 y:=0.0 z:=0.1 yaw:=0.0
 ```
 
 ```bash
 ros2 launch clearpath_gz robot_spawn.launch.py \
-  setup_path:=/home/user/dev/phd_assignment_ws/clearpath/r2 \
+  setup_path:=/home/user/dev/ltu-rai-assignment-3568-2026/clearpath/r2 \
   world:=warehouse x:=4.0 y:=0.0 z:=0.1 yaw:=0.0
 ```
 
@@ -90,7 +90,7 @@ ros2 launch clearpath_gz robot_spawn.launch.py \
 ```bash
 ros2 launch nav2_bringup bringup_launch.py \
   namespace:=r0 use_namespace:=true use_sim_time:=true \
-  map:=/home/user/dev/phd_assignment_ws/map/warehouse_demo.yaml \
+  map:=/home/user/dev/ltu-rai-assignment-3568-2026/map/warehouse_demo.yaml \
   params_file:=nav2_config/nav2_params_r0.yaml \
   autostart:=true use_composition:=False
 ```
